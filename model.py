@@ -76,3 +76,62 @@ class SGNS:
 
         return total_loss / len(pairs)
 
+   def most_similar(self, word, vocab, top_k=5):
+            """
+            Return the top_k most cosine-similar words to `word`.
+    
+            vocab: the word->index dict from build_vocab()
+            Returns a list of (word, similarity_score) tuples, sorted by descending similarity.
+            """
+            if word not in vocab:
+                raise KeyError(f"'{word}' not in vocabulary")
+    
+            # Build reverse mapping once
+            idx2word = {idx: w for w, idx in vocab.items()}
+    
+            # L2-normalise all input vectors for cosine similarity
+            vecs = self.W_in
+            norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-10
+            vecs_norm = vecs / norms
+    
+            query = vecs_norm[vocab[word]]
+            sims = vecs_norm @ query                  # cosine sim to every word
+    
+            sims[vocab[word]] = -1.0                  # exclude the query word itself
+    
+            top_indices = np.argpartition(sims, -top_k)[-top_k:]
+            top_indices = top_indices[np.argsort(sims[top_indices])[::-1]]
+    
+            return [(idx2word[i], float(sims[i])) for i in top_indices]
+    
+    def analogy(self, pos1, neg1, pos2, vocab, top_k=5):
+            """
+            Solve: pos1 - neg1 + pos2 ≈ ?
+            Example: king - man + woman ≈ queen
+    
+            vocab: the word->index dict from build_vocab()
+            Returns a list of (word, similarity_score) tuples.
+            """
+            for w in [pos1, neg1, pos2]:
+                if w not in vocab:
+                    raise KeyError(f"'{w}' not in vocabulary")
+    
+            idx2word = {idx: w for w, idx in vocab.items()}
+    
+            vecs = self.W_in
+            norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-10
+            vecs_norm = vecs / norms
+    
+            query = vecs_norm[vocab[pos1]] - vecs_norm[vocab[neg1]] + vecs_norm[vocab[pos2]]
+            query /= (np.linalg.norm(query) + 1e-10)
+    
+            sims = vecs_norm @ query
+    
+            # Exclude the three input words from results
+            for w in [pos1, neg1, pos2]:
+                sims[vocab[w]] = -1.0
+    
+            top_indices = np.argpartition(sims, -top_k)[-top_k:]
+            top_indices = top_indices[np.argsort(sims[top_indices])[::-1]]
+    
+            return [(idx2word[i], float(sims[i])) for i in top_indices]
