@@ -26,11 +26,16 @@ def main():
     epochs = 50
 
     for epoch in range(epochs):
-
         loss = model.train_epoch(pairs, neg_dist)
+        print(f"Epoch {epoch+1}/{epochs}: loss={loss:.4f}")
 
-        print(f"Epoch {epoch+1}: loss={loss:.4f}")
-
+    results = model.most_similar("learning", vocab, top_k=5)
+    for word, score in results:
+        print(f"  {word}: {score:.3f}")
+    
+    results = model.analogy("Rome", "Italy", "France", vocab, top_k=3) # On the sample dataset, this won't work, but in reality we'd expect the output to be "Paris"
+    for word, score in results:
+        print(f"  {word}: {score:.3f}")
 
 if __name__ == "__main__":
     main()
